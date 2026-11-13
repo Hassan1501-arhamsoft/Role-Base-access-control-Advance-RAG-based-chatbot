@@ -1,5 +1,5 @@
 // src/services/tool.service.js
-
+import User from "../models/user.model.js";
 export const publicTools = [
   {
     type: "function",
@@ -38,7 +38,8 @@ export const publicTools = [
   }
 ];
 
-export const adminTools = [{
+export const adminTools = [
+  {
     type: "function",
     function: {
       name: "getSystemStatus",
@@ -49,7 +50,20 @@ export const adminTools = [{
         required: [],
       },
     },
-  }];
+  },
+  {
+    type: "function",
+    function: {
+      name: "getAllUsers",
+      description: "Fetch a list of all registered users. For admin use only.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  }
+];
 
 // NEW HELPER: Dynamically construct the allowed tools array based on role
 export const getToolsByRole = (role) => {
@@ -169,6 +183,22 @@ export const executeTool = async (toolCall) => {
       console.error("Tool execution error (getSystemStatus):", error);
       return JSON.stringify({ error: "Failed to retrieve system status." });
     }
+  }
+  if(name === "getAllUsers") {
+    try {
+    // .find({}) gets all users. '-password' ensures we don't accidentally leak hashes to the AI.
+    // .lean() makes the query faster by returning plain JavaScript objects instead of Mongoose documents.
+    const users = await User.find({}, "-password").lean();
+    
+    if (!users || users.length === 0) {
+      return JSON.stringify({ message: "No users found in the database." });
+    }
+    
+    return JSON.stringify(users);
+  } catch (error) {
+    console.error("Database Error in getAllUsers tool:", error);
+    return JSON.stringify({ error: "Failed to fetch users due to a database error." });
+  }
   }
   return JSON.stringify({ error: `Tool ${name} not found` });
 };
